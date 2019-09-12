@@ -65,26 +65,22 @@ class Heap heap where
 
   merge :: heap -> heap -> heap
   heap1 `merge` heap2 =
-    case (findMax heap1, deleteMax heap1) of
-      (Just heapMax, Just heapRest) -> heapRest `merge` (heapMax `insert` heap2)
-      (Nothing , Nothing      ) -> heap2
-      (Just _  , Nothing      ) ->
-        error "Impossible happened. There is a max but the heap is empty."
-      (Nothing , Just _      ) ->
-        error "Impossible happened. Heap is non-empty but there is a max."
-
-  deleteMax :: heap -> Maybe heap
-  deleteMax = fmap snd <$> decompose
+    case decompose heap1 of
+      Just (heapMax, heapRest) -> heapRest `merge` (heapMax `insert` heap2)
+      Nothing                  -> heap2
 
   decompose :: heap -> Maybe (Elem heap, heap)
   decompose heap =
     case (findMax heap, deleteMax heap) of
       (Just heapMax, Just heapRest) -> Just (heapMax, heapRest)
       (Nothing     , Nothing      ) -> Nothing
-      (Just _  , Nothing      ) ->
-        error "Impossible happened. There is a max but the heap is empty."
-      (Nothing , Just _      ) ->
-        error "Impossible happened. Heap is non-empty but there is a max."
+      (Just _      , Nothing      ) -> error
+        "Impossible happened. There is a max but the heap is empty."
+      (Nothing     , Just _       ) -> error
+        "Impossible happened. Heap is non-empty but there is a max."
+
+  deleteMax :: heap -> Maybe heap
+  deleteMax = fmap snd <$> decompose
 
 --------------------------------------------------------------------------------
 -- Inefficient list heap
