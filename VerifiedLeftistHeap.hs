@@ -93,6 +93,8 @@ instance Ord a => Heap [ a ] where
 
   empty = []
 
+  fromList xs = xs
+
   insert = (:)
 
   merge = (<>)
