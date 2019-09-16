@@ -53,7 +53,8 @@ class Heap heap where
   fromList xs = -- O(n) for leftist heaps
     case go (map singleton xs) of
       [ heap ] -> heap
-      _        -> error "Fatal error. Did not converge to a single heap."
+      [ ]      -> empty
+      _        -> error "Impossible. Did not converge to a single heap."
     where
     go [] = []
     go [ x ] = [ x ]
