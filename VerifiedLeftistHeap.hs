@@ -16,7 +16,7 @@
 module HeapLeftistTyped
   ( main
   , Heap(..)
-  , VanillaHeap, SafeHeap, SaferHeap
+  , LeftistHeap, SafeHeap, SaferHeap
   ) where
 
 import Data.Kind (Type)
@@ -110,10 +110,20 @@ instance Ord a => Heap [ a ] where
 -- Unverified leftist heap
 --------------------------------------------------------------------------------
 
-data VanillaHeap a = Leaf | Node a Int (VanillaHeap a) (VanillaHeap a)
+data LeftistHeap a = Leaf | Node a Int (LeftistHeap a) (LeftistHeap a)
 
-instance Ord a => Heap (VanillaHeap a) where
-  type Elem (VanillaHeap a) = a
+class HasRank a where
+  type RankType a
+  rank :: a -> RankType a
+
+instance HasRank (LeftistHeap a) where
+  type RankType (LeftistHeap a) = Int
+
+  rank Leaf           = 0
+  rank (Node _ r _ _) = r
+
+instance Ord a => Heap (LeftistHeap a) where
+  type Elem (LeftistHeap a) = a
 
   isEmpty Leaf = True
   isEmpty _    = False
@@ -130,15 +140,11 @@ instance Ord a => Heap (VanillaHeap a) where
       then mkNode x left1 (merge right1 h2)
       else mkNode y left2 (merge right2 h1)
     where
-    mkNode :: a -> VanillaHeap a -> VanillaHeap a -> VanillaHeap a
+    mkNode :: a -> LeftistHeap a -> LeftistHeap a -> LeftistHeap a
     mkNode a heap1 heap2 =
       if rank heap1 <= rank heap2
         then Node a (rank heap1 + 1) heap2 heap1
         else Node a (rank heap2 + 1) heap1 heap2
-
-    rank :: VanillaHeap a -> Int
-    rank Leaf           = 0
-    rank (Node _ r _ _) = r
 
   decompose Leaf                  = Nothing
   decompose (Node x _ left right) = Just (x, merge left right)
@@ -158,6 +164,12 @@ data SafeHeap :: Nat -> Type -> Type where
         -> SafeHeap n a -> SafeHeap m a -- Children
         -> m <= n                       -- Leftist invariant
         -> SafeHeap ('S m) a
+
+instance HasRank (SafeHeap rank val) where
+  type RankType (SafeHeap rank val) = Rank rank
+
+  rank Leaf'             = Rank SZ
+  rank (Node' _ r _ _ _) = r
 
 data SafeHeapWrapped a = forall rank. SHW (SafeHeap rank a)
 
@@ -185,10 +197,6 @@ instance Ord a => Heap (SafeHeapWrapped a) where
         Left  r1LEQr2 -> SHW $ Node' a (incRank $ rank h1) h2 h1 r1LEQr2
         Right r2LEQr1 -> SHW $ Node' a (incRank $ rank h2) h1 h2 r2LEQr1
 
-    rank :: SafeHeap rank a -> Rank rank
-    rank Leaf'             = Rank SZ
-    rank (Node' _ r _ _ _) = r
-
   decompose (SHW safeHeap) =
     case safeHeap of
       Leaf'                  -> Nothing
@@ -207,6 +215,12 @@ data SaferHeap :: Nat -> Nat -> Type where
          -> m <= n                         -- Leftist invariant
          -> b <= a -> c <= a               -- Heap invariant
          -> SaferHeap ('S m) a
+
+instance HasRank (SaferHeap rank val) where
+  type RankType (SaferHeap rank val) = Rank rank
+
+  rank Leaf''                 = Rank SZ
+  rank (Node'' _ r _ _ _ _ _) = r
 
 data SaferHeapWrapped = forall rank value. SHW' (SaferHeap rank value)
 
@@ -261,10 +275,6 @@ instance Heap SaferHeapWrapped where
       where
       incARank = incRank $ rank ha
       incBRank = incRank $ rank hb
-
-    rank :: SaferHeap rank val -> Rank rank
-    rank Leaf''                 = Rank SZ
-    rank (Node'' _ r _ _ _ _ _) = r
 
     value :: SaferHeap rank val -> Value val
     value Leaf''                   = Value SZ
@@ -400,7 +410,7 @@ sameMaxAfterActions acts =
 
 main :: IO ()
 main = do
-  quickCheck (sameMaxAfterActions @(VanillaHeap Int)     @[ Int ])
+  quickCheck (sameMaxAfterActions @(LeftistHeap Int)     @[ Int ])
   quickCheck (sameMaxAfterActions @(SafeHeapWrapped Int) @[ Int ])
   quickCheck (sameMaxAfterActions @SaferHeapWrapped      @[ Nat ])
 
