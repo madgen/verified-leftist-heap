@@ -1,0 +1,21 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.31.2.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: a8f64486ce5052370ffb303e7c2e2dfd7e9f44625c87fbc04ab0f49077b71ed9
+
+name:           verified-leftist-heap
+version:        0.0.0
+build-type:     Simple
+
+executable example-servant-minimal
+  main-is: VerifiedLeftistHeap.hs
+  other-modules:
+      Paths_verified_leftist_heap
+  ghc-options: -Wall
+  build-depends:
+      QuickCheck
+    , base
+  default-language: Haskell2010

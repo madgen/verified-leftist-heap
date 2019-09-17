@@ -1,0 +1,11 @@
+name: verified-leftist-heap
+
+ghc-options: -Wall
+
+dependencies:
+  - base
+  - QuickCheck
+
+executables:
+  example-servant-minimal:
+    main: VerifiedLeftistHeap.hs
