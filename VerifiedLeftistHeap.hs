@@ -1,5 +1,5 @@
 #!/usr/bin/env stack
--- stack script --resolver lts-14.5 --package QuickCheck --ghc-options -Wall
+-- stack script --resolver lts-14.6 --package QuickCheck --ghc-options -Wall
 
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PolyKinds #-}
@@ -13,7 +13,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
-module HeapLeftistTyped
+module VerifiedLeftistHeap
   ( main
   , Heap(..)
   , LeftistHeap, SafeHeap, SaferHeap
