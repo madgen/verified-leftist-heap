@@ -250,18 +250,18 @@ instance Heap SaferHeapWrapped where
     merge' (SHAW ha@(Node'' va@(Value sa) _ aLeft aRight _ lLEQa rLEQa))
            (SHAW hb@(Node'' vb@(Value sb) _ bLeft bRight _ lLEQb rLEQb)) =
       case lemAntiSym sa sb of
-        Left  aLEQb | Refl <- lemMaxOfLEQ sa sb aLEQb ->
+        Left  aLEQb | Refl <- lemMaxOfLEQ aLEQb ->
           let child1 = SHAW bLeft
               c1LEQp = lLEQb
               child2 = merge' (SHAW bRight) (SHAW ha)
-              c2LEQp = lemDoubleLEQMax (unValue bRight) sa rLEQb aLEQb
+              c2LEQp = lemDoubleLEQMax rLEQb aLEQb
           in mkNode vb child1 child2 c1LEQp c2LEQp
         Right bLEQa | Refl <- lemMaxSym sa sb
-                    , Refl <- lemMaxOfLEQ sb sa bLEQa ->
+                    , Refl <- lemMaxOfLEQ bLEQa ->
           let child1 = SHAW aLeft
               c1LEQp = lLEQa
               child2 = merge' (SHAW aRight) (SHAW hb)
-              c2LEQp = lemDoubleLEQMax (unValue aRight) sb rLEQa bLEQa
+              c2LEQp = lemDoubleLEQMax rLEQa bLEQa
           in mkNode va child1 child2 c1LEQp c2LEQp
 
     mkNode :: Value c
@@ -275,13 +275,6 @@ instance Heap SaferHeapWrapped where
       where
       incARank = incRank $ rank ha
       incBRank = incRank $ rank hb
-
-    value :: SaferHeap rank val -> Value val
-    value Leaf''                   = Value SZ
-    value (Node'' val _ _ _ _ _ _) = val
-
-    unValue :: SaferHeap rank val -> SNat val
-    unValue = _unValue . value
 
   decompose (SHW' saferHeap) =
     case saferHeap of
@@ -335,11 +328,16 @@ lemAntiSym (SS n) (SS m) =
     Left  nLEQm -> Left  (Double nLEQm)
     Right mLEQn -> Right (Double mLEQn)
 
-lemDecLEQ :: SNat n -> SNat m -> 'S n <= m -> n <= m
-lemDecLEQ SZ      sm      _            = lemZLEQAll sm
-lemDecLEQ _       SZ      _            = error "Impossible case."
-lemDecLEQ sn      (SS sm) (Single leq) = Single (lemDecLEQ sn sm leq)
-lemDecLEQ (SS sn) (SS sm) (Double leq) = Double (lemDecLEQ sn sm leq)
+lemDecLEQ :: 'S n <= m -> n <= m
+lemDecLEQ snLEQm =
+  case retrieve snLEQm of
+    (SS n, m) -> go n m snLEQm
+  where
+  go :: SNat n -> SNat m -> 'S n <= m -> n <= m
+  go SZ     sm     _            = lemZLEQAll sm
+  go _      SZ     _            = error "Impossible case."
+  go _      (SS _) (Single leq) = Single (lemDecLEQ leq)
+  go (SS _) (SS _) (Double leq) = Double (lemDecLEQ leq)
 
 type family Max (n :: Nat) (m :: Nat) :: Nat where
   Max 'Z m          = m
@@ -347,17 +345,17 @@ type family Max (n :: Nat) (m :: Nat) :: Nat where
   Max ('S n) ('S m) = 'S (Max n m)
 
 lemMaxSym :: SNat x -> SNat y -> Max x y :~: Max y x
-lemMaxSym SZ sy | Refl <- lemMaxOfLEQ SZ sy (lemZLEQAll sy) = Refl
-lemMaxSym sx SZ | Refl <- lemMaxOfLEQ SZ sx (lemZLEQAll sx) = Refl
-lemMaxSym (SS sx) (SS sy) | Refl <- lemMaxSym sx sy  = Refl
+lemMaxSym SZ y          | Refl <- lemMaxOfLEQ $ lemZLEQAll y = Refl
+lemMaxSym x SZ          | Refl <- lemMaxOfLEQ $ lemZLEQAll x = Refl
+lemMaxSym (SS x) (SS y) | Refl <- lemMaxSym x y              = Refl
 
-lemMaxOfLEQ :: SNat x -> SNat y -> x <= y -> Max x y :~: y
-lemMaxOfLEQ SZ      _       _       = Refl
-lemMaxOfLEQ (SS _)  SZ      _       = error "Impossible case."
-lemMaxOfLEQ (SS sx) (SS sy) sxLEQsy =
-  case sxLEQsy of
-    Double xLEQy  | Refl <- lemMaxOfLEQ sx sy xLEQy                    -> Refl
-    Single sxLEQy | Refl <- lemMaxOfLEQ sx sy (lemDecLEQ sx sy sxLEQy) -> Refl
+lemMaxOfLEQ :: x <= y -> Max x y :~: y
+lemMaxOfLEQ Base                                        = Refl
+lemMaxOfLEQ (Double xLEQy) | Refl  <- lemMaxOfLEQ xLEQy = Refl
+lemMaxOfLEQ (Single xLEQy) | (x,_) <- retrieve    xLEQy =
+  case x of
+    SZ                                           -> Refl
+    SS _ | Refl <- lemMaxOfLEQ (lemDecLEQ xLEQy) -> Refl
 
 lemMaxSelective :: SNat x -> SNat y -> Either (Max x y :~: x) (Max x y :~: y)
 lemMaxSelective SZ _ = Right Refl
@@ -367,11 +365,16 @@ lemMaxSelective (SS sx) (SS sy) =
     Left  Refl -> Left  Refl
     Right Refl -> Right Refl
 
-lemDoubleLEQMax :: SNat x -> SNat y -> x <= z -> y <= z -> Max x y <= z
-lemDoubleLEQMax sx sy xLEQz yLEQz =
-  case lemMaxSelective sx sy of
+lemDoubleLEQMax :: x <= z -> y <= z -> Max x y <= z
+lemDoubleLEQMax xLEQz yLEQz =
+  case lemMaxSelective (fst . retrieve $ xLEQz) (fst . retrieve $ yLEQz) of
     Left  Refl -> xLEQz
     Right Refl -> yLEQz
+
+retrieve :: n <= m -> (SNat n, SNat m)
+retrieve Base = (SZ, SZ)
+retrieve (Single nLEQsm) | (n,m) <- retrieve nLEQsm = (   n, SS m)
+retrieve (Double nLEQsm) | (n,m) <- retrieve nLEQsm = (SS n, SS m)
 
 --------------------------------------------------------------------------------
 -- Testing
