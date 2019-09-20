@@ -196,7 +196,7 @@ instance Ord a => Heap (SomeSafeHeap a) where
     where
     mkNode :: a -> SomeSafeHeap a -> SomeSafeHeap a -> SomeSafeHeap a
     mkNode a (SSH h1) (SSH h2) =
-      case lemAntiSym (_unRank . rank $ h1) (_unRank . rank $ h2) of
+      case lemConnexity (_unRank . rank $ h1) (_unRank . rank $ h2) of
         Left  r1LEQr2 -> SSH $ Node' a (incRank $ rank h1) h2 h1 r1LEQr2
         Right r2LEQr1 -> SSH $ Node' a (incRank $ rank h2) h1 h2 r2LEQr1
 
@@ -255,7 +255,7 @@ instance Heap SomeSaferHeap where
     merge' heap (ASSH Leaf'') = heap
     merge' (ASSH ha@(Node'' va@(Value sa) _ aLeft aRight _ lLEQa rLEQa))
            (ASSH hb@(Node'' vb@(Value sb) _ bLeft bRight _ lLEQb rLEQb)) =
-      case lemAntiSym sa sb of
+      case lemConnexity sa sb of
         Left  aLEQb | Refl <- lemMaxOfLEQ aLEQb ->
           let child1 = ASSH bLeft
               c1LEQp = lLEQb
@@ -275,7 +275,7 @@ instance Heap SomeSaferHeap where
            -> a <= c -> b <= c
            -> AlmostSomeSaferHeap c
     mkNode vc (ASSH ha) (ASSH hb) aLEQc bLEQc =
-      case lemAntiSym (_unRank . rank $ ha) (_unRank . rank $ hb) of
+      case lemConnexity (_unRank . rank $ ha) (_unRank . rank $ hb) of
         Left  arLEQbr -> ASSH $ Node'' vc incARank hb ha arLEQbr bLEQc aLEQc
         Right brLEQar -> ASSH $ Node'' vc incBRank ha hb brLEQar aLEQc bLEQc
       where
@@ -326,11 +326,11 @@ lemZLEQAll :: SNat n -> 'Z <= n
 lemZLEQAll SZ     = Base
 lemZLEQAll (SS n) = Single (lemZLEQAll n)
 
-lemAntiSym :: SNat n -> SNat m -> Either (n <= m) (m <= n)
-lemAntiSym SZ m = Left  (lemZLEQAll m)
-lemAntiSym n SZ = Right (lemZLEQAll n)
-lemAntiSym (SS n) (SS m) =
-  case lemAntiSym n m of
+lemConnexity :: SNat n -> SNat m -> Either (n <= m) (m <= n)
+lemConnexity SZ m = Left  (lemZLEQAll m)
+lemConnexity n SZ = Right (lemZLEQAll n)
+lemConnexity (SS n) (SS m) =
+  case lemConnexity n m of
     Left  nLEQm -> Left  (Double nLEQm)
     Right mLEQn -> Right (Double mLEQn)
 
