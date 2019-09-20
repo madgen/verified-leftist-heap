@@ -165,8 +165,8 @@ data SafeHeap :: Nat -> Type -> Type where
         -> m <= n                       -- Leftist invariant
         -> SafeHeap ('S m) a
 
-instance HasRank (SafeHeap rank val) where
-  type RankType (SafeHeap rank val) = Rank rank
+instance HasRank (SafeHeap rank label) where
+  type RankType (SafeHeap rank label) = Rank rank
 
   rank Leaf'             = Rank SZ
   rank (Node' _ r _ _ _) = r
@@ -209,25 +209,25 @@ instance Ord a => Heap (SomeSafeHeap a) where
 -- Play it again Sam but this time with the heap invariant as well
 --------------------------------------------------------------------------------
 
-newtype Value n = Value { _unValue :: SNat n }
+newtype Label n = Label { _unLabel :: SNat n }
 
 data SaferHeap :: Nat -> Nat -> Type where
   Leaf'' :: SaferHeap 'Z 'Z
-  Node'' :: Value a -> Rank ('S m)         -- Node' data
+  Node'' :: Label a -> Rank ('S m)         -- Node' data
          -> SaferHeap n b -> SaferHeap m c -- Children
          -> m <= n                         -- Leftist invariant
          -> b <= a -> c <= a               -- Heap invariant
          -> SaferHeap ('S m) a
 
-instance HasRank (SaferHeap rank val) where
-  type RankType (SaferHeap rank val) = Rank rank
+instance HasRank (SaferHeap rank label) where
+  type RankType (SaferHeap rank label) = Rank rank
 
   rank Leaf''                 = Rank SZ
   rank (Node'' _ r _ _ _ _ _) = r
 
-data SomeSaferHeap = forall rank value. SSH' (SaferHeap rank value)
+data SomeSaferHeap = forall rank label. SSH' (SaferHeap rank label)
 
-data AlmostSomeSaferHeap value = forall rank. ASSH (SaferHeap rank value)
+data AlmostSomeSaferHeap label = forall rank. ASSH (SaferHeap rank label)
 
 instance Heap SomeSaferHeap where
   type Elem SomeSaferHeap = Nat
@@ -239,9 +239,9 @@ instance Heap SomeSaferHeap where
 
   singleton x | SomeNat sX <- promote x = SSH' $ singleton' sX
     where
-    singleton' :: SNat val -> SaferHeap ('S 'Z) val
+    singleton' :: SNat label -> SaferHeap ('S 'Z) label
     singleton' sX = Node''
-      (Value sX) (Rank (SS SZ))
+      (Label sX) (Rank (SS SZ))
       Leaf'' Leaf''
       Base
       (lemZLEQAll sX) (lemZLEQAll sX)
@@ -253,8 +253,8 @@ instance Heap SomeSaferHeap where
            -> AlmostSomeSaferHeap (Max a b)
     merge' (ASSH Leaf'') heap = heap
     merge' heap (ASSH Leaf'') = heap
-    merge' (ASSH ha@(Node'' va@(Value sa) _ aLeft aRight _ lLEQa rLEQa))
-           (ASSH hb@(Node'' vb@(Value sb) _ bLeft bRight _ lLEQb rLEQb)) =
+    merge' (ASSH ha@(Node'' va@(Label sa) _ aLeft aRight _ lLEQa rLEQa))
+           (ASSH hb@(Node'' vb@(Label sb) _ bLeft bRight _ lLEQb rLEQb)) =
       case lemConnexity sa sb of
         Left  aLEQb | Refl <- lemMaxOfLEQ aLEQb ->
           let child1 = ASSH bLeft
@@ -270,7 +270,7 @@ instance Heap SomeSaferHeap where
               c2LEQp = lemDoubleLEQMax rLEQa bLEQa
           in mkNode va child1 child2 c1LEQp c2LEQp
 
-    mkNode :: Value c
+    mkNode :: Label c
            -> AlmostSomeSaferHeap a -> AlmostSomeSaferHeap b
            -> a <= c -> b <= c
            -> AlmostSomeSaferHeap c
@@ -286,7 +286,7 @@ instance Heap SomeSaferHeap where
     case saferHeap of
       Leaf''                      -> Nothing
       Node'' v _ left right _ _ _ ->
-        Just (demote . _unValue $ v, merge (SSH' left) (SSH' right))
+        Just (demote . _unLabel $ v, merge (SSH' left) (SSH' right))
 
 --------------------------------------------------------------------------------
 -- Some theory building for <= and Max on natural numbers
