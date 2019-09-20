@@ -337,10 +337,10 @@ lemConnexity (SS x) (SS y) =
 lemDecLEQ :: 'S n <= m -> n <= m
 lemDecLEQ snLEQm =
   case recover snLEQm of
-    (SS n, m) -> go n m snLEQm
+    (SS x, y) -> go x y snLEQm
   where
   go :: SNat n -> SNat m -> 'S n <= m -> n <= m
-  go SZ     sm     _            = lemZLEQAll sm
+  go SZ     y      _            = lemZLEQAll y
   go _      SZ     _            = error "Impossible case."
   go _      (SS _) (Single leq) = Single (lemDecLEQ leq)
   go (SS _) (SS _) (Double leq) = Double (lemDecLEQ leq)
@@ -350,12 +350,12 @@ type family Max (n :: Nat) (m :: Nat) :: Nat where
   Max n 'Z          = n
   Max ('S n) ('S m) = 'S (Max n m)
 
-lemMaxSym :: SNat x -> SNat y -> Max x y :~: Max y x
+lemMaxSym :: SNat n -> SNat m -> Max n m :~: Max m n
 lemMaxSym SZ y          | Refl <- lemMaxOfLEQ $ lemZLEQAll y = Refl
 lemMaxSym x SZ          | Refl <- lemMaxOfLEQ $ lemZLEQAll x = Refl
 lemMaxSym (SS x) (SS y) | Refl <- lemMaxSym x y              = Refl
 
-lemMaxOfLEQ :: x <= y -> Max x y :~: y
+lemMaxOfLEQ :: n <= m -> Max n m :~: m
 lemMaxOfLEQ Base                                        = Refl
 lemMaxOfLEQ (Double xLEQy) | Refl  <- lemMaxOfLEQ xLEQy = Refl
 lemMaxOfLEQ (Single xLEQy) | (x,_) <- recover     xLEQy =
@@ -363,24 +363,24 @@ lemMaxOfLEQ (Single xLEQy) | (x,_) <- recover     xLEQy =
     SZ                                           -> Refl
     SS _ | Refl <- lemMaxOfLEQ (lemDecLEQ xLEQy) -> Refl
 
-lemMaxSelective :: SNat x -> SNat y -> Either (Max x y :~: x) (Max x y :~: y)
+lemMaxSelective :: SNat n -> SNat m -> Either (Max n m :~: n) (Max n m :~: m)
 lemMaxSelective SZ _ = Right Refl
 lemMaxSelective _ SZ = Left Refl
-lemMaxSelective (SS sx) (SS sy) =
-  case lemMaxSelective sx sy of
+lemMaxSelective (SS x) (SS y) =
+  case lemMaxSelective x y of
     Left  Refl -> Left  Refl
     Right Refl -> Right Refl
 
-lemDoubleLEQMax :: x <= z -> y <= z -> Max x y <= z
-lemDoubleLEQMax xLEQz yLEQz =
-  case lemMaxSelective (fst . recover $ xLEQz) (fst . recover $ yLEQz) of
-    Left  Refl -> xLEQz
-    Right Refl -> yLEQz
+lemDoubleLEQMax :: n <= l -> m <= l -> Max n m <= l
+lemDoubleLEQMax nLEQl mLEQl =
+  case lemMaxSelective (fst . recover $ nLEQl) (fst . recover $ mLEQl) of
+    Left  Refl -> nLEQl
+    Right Refl -> mLEQl
 
 recover :: n <= m -> (SNat n, SNat m)
 recover Base = (SZ, SZ)
-recover (Single nLEQsm) | (n,m) <- recover nLEQsm = (   n, SS m)
-recover (Double nLEQm)  | (n,m) <- recover nLEQm  = (SS n, SS m)
+recover (Single nLEQsm) | (x,y) <- recover nLEQsm = (   x, SS y)
+recover (Double nLEQm)  | (x,y) <- recover nLEQm  = (SS x, SS y)
 
 --------------------------------------------------------------------------------
 -- Testing
