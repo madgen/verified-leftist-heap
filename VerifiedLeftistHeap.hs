@@ -171,36 +171,39 @@ instance HasRank (SafeHeap rank val) where
   rank Leaf'             = Rank SZ
   rank (Node' _ r _ _ _) = r
 
-data SafeHeapWrapped a = forall rank. SHW (SafeHeap rank a)
+data SomeSafeHeap a = forall rank. SSH (SafeHeap rank a)
 
-instance Ord a => Heap (SafeHeapWrapped a) where
-  type Elem (SafeHeapWrapped a) = a
+instance Ord a => Heap (SomeSafeHeap a) where
+  type Elem (SomeSafeHeap a) = a
 
-  isEmpty (SHW Leaf') = True
+  isEmpty (SSH Leaf') = True
   isEmpty _        = False
 
-  empty = SHW Leaf'
+  empty = SSH Leaf'
 
-  singleton x = SHW $ Node' x (Rank (SS SZ)) Leaf' Leaf' Base
-
-  merge (SHW Leaf') heap = heap
-  merge heap (SHW Leaf') = heap
-  merge heap1@(SHW (Node' x _ left1 right1 _))
-        heap2@(SHW (Node' y _ left2 right2 _)) =
-    if x > y
-      then mkNode x (SHW left1) (merge (SHW right1) heap2)
-      else mkNode y (SHW left2) (merge (SHW right2) heap1)
+  singleton x = SSH singleton'
     where
-    mkNode :: a -> SafeHeapWrapped a -> SafeHeapWrapped a -> SafeHeapWrapped a
-    mkNode a (SHW h1) (SHW h2) =
-      case lemAntiSym (_unRank . rank $ h1) (_unRank . rank $ h2) of
-        Left  r1LEQr2 -> SHW $ Node' a (incRank $ rank h1) h2 h1 r1LEQr2
-        Right r2LEQr1 -> SHW $ Node' a (incRank $ rank h2) h1 h2 r2LEQr1
+    singleton' :: SafeHeap ('S 'Z) a
+    singleton' = Node' x (Rank (SS SZ)) Leaf' Leaf' Base
 
-  decompose (SHW safeHeap) =
+  merge (SSH Leaf') heap = heap
+  merge heap (SSH Leaf') = heap
+  merge heap1@(SSH (Node' x _ left1 right1 _))
+        heap2@(SSH (Node' y _ left2 right2 _)) =
+    if x > y
+      then mkNode x (SSH left1) (merge (SSH right1) heap2)
+      else mkNode y (SSH left2) (merge (SSH right2) heap1)
+    where
+    mkNode :: a -> SomeSafeHeap a -> SomeSafeHeap a -> SomeSafeHeap a
+    mkNode a (SSH h1) (SSH h2) =
+      case lemAntiSym (_unRank . rank $ h1) (_unRank . rank $ h2) of
+        Left  r1LEQr2 -> SSH $ Node' a (incRank $ rank h1) h2 h1 r1LEQr2
+        Right r2LEQr1 -> SSH $ Node' a (incRank $ rank h2) h1 h2 r2LEQr1
+
+  decompose (SSH safeHeap) =
     case safeHeap of
       Leaf'                  -> Nothing
-      Node' x _ left right _ -> Just (x, merge (SHW left) (SHW right))
+      Node' x _ left right _ -> Just (x, merge (SSH left) (SSH right))
 
 --------------------------------------------------------------------------------
 -- Play it again Sam but this time with the heap invariant as well
@@ -222,65 +225,68 @@ instance HasRank (SaferHeap rank val) where
   rank Leaf''                 = Rank SZ
   rank (Node'' _ r _ _ _ _ _) = r
 
-data SaferHeapWrapped = forall rank value. SHW' (SaferHeap rank value)
+data SomeSaferHeap = forall rank value. SSH' (SaferHeap rank value)
 
-data SaferHeapAlmostWrapped value = forall rank. SHAW (SaferHeap rank value)
+data AlmostSomeSaferHeap value = forall rank. ASSH (SaferHeap rank value)
 
-instance Heap SaferHeapWrapped where
-  type Elem SaferHeapWrapped = Nat
+instance Heap SomeSaferHeap where
+  type Elem SomeSaferHeap = Nat
 
-  isEmpty (SHW' Leaf'') = True
+  isEmpty (SSH' Leaf'') = True
   isEmpty _             = False
 
-  empty = SHW' Leaf''
+  empty = SSH' Leaf''
 
-  singleton x | SomeNat sX <- promote x = SHW' $
-    Node'' (Value sX) (Rank (SS SZ))
-           Leaf'' Leaf''
-           Base
-           (lemZLEQAll sX) (lemZLEQAll sX)
-
-  merge (SHW' h1) (SHW' h2) | SHAW mergedHeap <- merge' (SHAW h1) (SHAW h2) =
-    SHW' mergedHeap
+  singleton x | SomeNat sX <- promote x = SSH' $ singleton' sX
     where
-    merge' :: SaferHeapAlmostWrapped a -> SaferHeapAlmostWrapped b
-           -> SaferHeapAlmostWrapped (Max a b)
-    merge' (SHAW Leaf'') heap = heap
-    merge' heap (SHAW Leaf'') = heap
-    merge' (SHAW ha@(Node'' va@(Value sa) _ aLeft aRight _ lLEQa rLEQa))
-           (SHAW hb@(Node'' vb@(Value sb) _ bLeft bRight _ lLEQb rLEQb)) =
+    singleton' :: SNat val -> SaferHeap ('S 'Z) val
+    singleton' sX = Node''
+      (Value sX) (Rank (SS SZ))
+      Leaf'' Leaf''
+      Base
+      (lemZLEQAll sX) (lemZLEQAll sX)
+
+  merge (SSH' h1) (SSH' h2) | ASSH mergedHeap <- merge' (ASSH h1) (ASSH h2) =
+    SSH' mergedHeap
+    where
+    merge' :: AlmostSomeSaferHeap a -> AlmostSomeSaferHeap b
+           -> AlmostSomeSaferHeap (Max a b)
+    merge' (ASSH Leaf'') heap = heap
+    merge' heap (ASSH Leaf'') = heap
+    merge' (ASSH ha@(Node'' va@(Value sa) _ aLeft aRight _ lLEQa rLEQa))
+           (ASSH hb@(Node'' vb@(Value sb) _ bLeft bRight _ lLEQb rLEQb)) =
       case lemAntiSym sa sb of
         Left  aLEQb | Refl <- lemMaxOfLEQ aLEQb ->
-          let child1 = SHAW bLeft
+          let child1 = ASSH bLeft
               c1LEQp = lLEQb
-              child2 = merge' (SHAW bRight) (SHAW ha)
+              child2 = merge' (ASSH bRight) (ASSH ha)
               c2LEQp = lemDoubleLEQMax rLEQb aLEQb
           in mkNode vb child1 child2 c1LEQp c2LEQp
         Right bLEQa | Refl <- lemMaxSym sa sb
                     , Refl <- lemMaxOfLEQ bLEQa ->
-          let child1 = SHAW aLeft
+          let child1 = ASSH aLeft
               c1LEQp = lLEQa
-              child2 = merge' (SHAW aRight) (SHAW hb)
+              child2 = merge' (ASSH aRight) (ASSH hb)
               c2LEQp = lemDoubleLEQMax rLEQa bLEQa
           in mkNode va child1 child2 c1LEQp c2LEQp
 
     mkNode :: Value c
-           -> SaferHeapAlmostWrapped a -> SaferHeapAlmostWrapped b
+           -> AlmostSomeSaferHeap a -> AlmostSomeSaferHeap b
            -> a <= c -> b <= c
-           -> SaferHeapAlmostWrapped c
-    mkNode vc (SHAW ha) (SHAW hb) aLEQc bLEQc =
+           -> AlmostSomeSaferHeap c
+    mkNode vc (ASSH ha) (ASSH hb) aLEQc bLEQc =
       case lemAntiSym (_unRank . rank $ ha) (_unRank . rank $ hb) of
-        Left  arLEQbr -> SHAW $ Node'' vc incARank hb ha arLEQbr bLEQc aLEQc
-        Right brLEQar -> SHAW $ Node'' vc incBRank ha hb brLEQar aLEQc bLEQc
+        Left  arLEQbr -> ASSH $ Node'' vc incARank hb ha arLEQbr bLEQc aLEQc
+        Right brLEQar -> ASSH $ Node'' vc incBRank ha hb brLEQar aLEQc bLEQc
       where
       incARank = incRank $ rank ha
       incBRank = incRank $ rank hb
 
-  decompose (SHW' saferHeap) =
+  decompose (SSH' saferHeap) =
     case saferHeap of
       Leaf''                      -> Nothing
       Node'' v _ left right _ _ _ ->
-        Just (demote . _unValue $ v, merge (SHW' left) (SHW' right))
+        Just (demote . _unValue $ v, merge (SSH' left) (SSH' right))
 
 --------------------------------------------------------------------------------
 -- Some theory building for <= and Max on natural numbers
@@ -330,7 +336,7 @@ lemAntiSym (SS n) (SS m) =
 
 lemDecLEQ :: 'S n <= m -> n <= m
 lemDecLEQ snLEQm =
-  case retrieve snLEQm of
+  case recover snLEQm of
     (SS n, m) -> go n m snLEQm
   where
   go :: SNat n -> SNat m -> 'S n <= m -> n <= m
@@ -352,7 +358,7 @@ lemMaxSym (SS x) (SS y) | Refl <- lemMaxSym x y              = Refl
 lemMaxOfLEQ :: x <= y -> Max x y :~: y
 lemMaxOfLEQ Base                                        = Refl
 lemMaxOfLEQ (Double xLEQy) | Refl  <- lemMaxOfLEQ xLEQy = Refl
-lemMaxOfLEQ (Single xLEQy) | (x,_) <- retrieve    xLEQy =
+lemMaxOfLEQ (Single xLEQy) | (x,_) <- recover     xLEQy =
   case x of
     SZ                                           -> Refl
     SS _ | Refl <- lemMaxOfLEQ (lemDecLEQ xLEQy) -> Refl
@@ -367,14 +373,14 @@ lemMaxSelective (SS sx) (SS sy) =
 
 lemDoubleLEQMax :: x <= z -> y <= z -> Max x y <= z
 lemDoubleLEQMax xLEQz yLEQz =
-  case lemMaxSelective (fst . retrieve $ xLEQz) (fst . retrieve $ yLEQz) of
+  case lemMaxSelective (fst . recover $ xLEQz) (fst . recover $ yLEQz) of
     Left  Refl -> xLEQz
     Right Refl -> yLEQz
 
-retrieve :: n <= m -> (SNat n, SNat m)
-retrieve Base = (SZ, SZ)
-retrieve (Single nLEQsm) | (n,m) <- retrieve nLEQsm = (   n, SS m)
-retrieve (Double nLEQsm) | (n,m) <- retrieve nLEQsm = (SS n, SS m)
+recover :: n <= m -> (SNat n, SNat m)
+recover Base = (SZ, SZ)
+recover (Single nLEQsm) | (n,m) <- recover nLEQsm = (   n, SS m)
+recover (Double nLEQm)  | (n,m) <- recover nLEQm  = (SS n, SS m)
 
 --------------------------------------------------------------------------------
 -- Testing
@@ -413,9 +419,9 @@ sameMaxAfterActions acts =
 
 main :: IO ()
 main = do
-  quickCheck (sameMaxAfterActions @(LeftistHeap Int)     @[ Int ])
-  quickCheck (sameMaxAfterActions @(SafeHeapWrapped Int) @[ Int ])
-  quickCheck (sameMaxAfterActions @SaferHeapWrapped      @[ Nat ])
+  quickCheck (sameMaxAfterActions @(LeftistHeap Int)  @[ Int ])
+  quickCheck (sameMaxAfterActions @(SomeSafeHeap Int) @[ Int ])
+  quickCheck (sameMaxAfterActions @SomeSaferHeap      @[ Nat ])
 
   putStrLn ""
   sampleActions <- sample' (arbitrary @(Action Int))
