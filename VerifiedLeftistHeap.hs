@@ -150,7 +150,7 @@ instance Ord a => Heap (LeftistHeap a) where
   decompose (Node x _ left right) = Just (x, merge left right)
 
 --------------------------------------------------------------------------------
--- Leftist heap with mechanised leftist invariant
+-- Leftist heap with mechanised leftist property
 --------------------------------------------------------------------------------
 
 newtype Rank n = Rank { _unRank :: SNat n }
@@ -162,7 +162,7 @@ data SafeHeap :: Nat -> Type -> Type where
   Leaf' :: SafeHeap 'Z a
   Node' :: a -> Rank ('S m)             -- Node' data
         -> SafeHeap n a -> SafeHeap m a -- Children
-        -> m <= n                       -- Leftist invariant
+        -> m <= n                       -- Leftist property
         -> SafeHeap ('S m) a
 
 instance HasRank (SafeHeap rank label) where
@@ -206,17 +206,17 @@ instance Ord a => Heap (SomeSafeHeap a) where
       Node' x _ left right _ -> Just (x, merge (SSH left) (SSH right))
 
 --------------------------------------------------------------------------------
--- Play it again Sam but this time with the heap invariant as well
+-- Play it again Sam but this time with the heap property as well
 --------------------------------------------------------------------------------
 
 newtype Label n = Label { _unLabel :: SNat n }
 
 data SaferHeap :: Nat -> Nat -> Type where
   Leaf'' :: SaferHeap 'Z 'Z
-  Node'' :: Label a -> Rank ('S m)         -- Node' data
+  Node'' :: Label a -> Rank ('S m)         -- Node'' data
          -> SaferHeap n b -> SaferHeap m c -- Children
-         -> m <= n                         -- Leftist invariant
-         -> b <= a -> c <= a               -- Heap invariant
+         -> m <= n                         -- Leftist property
+         -> b <= a -> c <= a               -- Heap property
          -> SaferHeap ('S m) a
 
 instance HasRank (SaferHeap rank label) where
