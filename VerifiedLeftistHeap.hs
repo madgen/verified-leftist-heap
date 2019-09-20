@@ -155,8 +155,8 @@ instance Ord a => Heap (LeftistHeap a) where
 
 newtype Rank n = Rank { _unRank :: SNat n }
 
-incRank :: Rank rank -> Rank ('S rank)
-incRank (Rank snat) = Rank (SS snat)
+incR :: Rank rank -> Rank ('S rank)
+incR (Rank snat) = Rank (SS snat)
 
 data SafeHeap :: Nat -> Type -> Type where
   Leaf' :: SafeHeap 'Z a
@@ -171,10 +171,10 @@ instance HasRank (SafeHeap rank label) where
   rank Leaf'             = Rank SZ
   rank (Node' _ r _ _ _) = r
 
-data SomeSafeHeap a = forall rank. SSH (SafeHeap rank a)
+data SomeSafeHeap label = forall rank. SSH (SafeHeap rank label)
 
-instance Ord a => Heap (SomeSafeHeap a) where
-  type Elem (SomeSafeHeap a) = a
+instance Ord label => Heap (SomeSafeHeap label) where
+  type Elem (SomeSafeHeap label) = label
 
   isEmpty (SSH Leaf') = True
   isEmpty _        = False
@@ -183,7 +183,7 @@ instance Ord a => Heap (SomeSafeHeap a) where
 
   singleton x = SSH singleton'
     where
-    singleton' :: SafeHeap ('S 'Z) a
+    singleton' :: SafeHeap ('S 'Z) label
     singleton' = Node' x (Rank (SS SZ)) Leaf' Leaf' Base
 
   merge (SSH Leaf') heap = heap
@@ -197,8 +197,8 @@ instance Ord a => Heap (SomeSafeHeap a) where
     mkNode :: a -> SomeSafeHeap a -> SomeSafeHeap a -> SomeSafeHeap a
     mkNode a (SSH h1) (SSH h2) =
       case lemConnexity (_unRank . rank $ h1) (_unRank . rank $ h2) of
-        Left  r1LEQr2 -> SSH $ Node' a (incRank $ rank h1) h2 h1 r1LEQr2
-        Right r2LEQr1 -> SSH $ Node' a (incRank $ rank h2) h1 h2 r2LEQr1
+        Left  r1LEQr2 -> SSH $ Node' a (incR $ rank h1) h2 h1 r1LEQr2
+        Right r2LEQr1 -> SSH $ Node' a (incR $ rank h2) h1 h2 r2LEQr1
 
   decompose (SSH safeHeap) =
     case safeHeap of
@@ -253,34 +253,32 @@ instance Heap SomeSaferHeap where
            -> AlmostSomeSaferHeap (Max a b)
     merge' (ASSH Leaf'') heap = heap
     merge' heap (ASSH Leaf'') = heap
-    merge' (ASSH ha@(Node'' va@(Label sa) _ aLeft aRight _ lLEQa rLEQa))
-           (ASSH hb@(Node'' vb@(Label sb) _ bLeft bRight _ lLEQb rLEQb)) =
-      case lemConnexity sa sb of
+    merge' (ASSH hA@(Node'' vA@(Label sA) _ aLeft aRight _ lLEQa rLEQa))
+           (ASSH hB@(Node'' vB@(Label sB) _ bLeft bRight _ lLEQb rLEQb)) =
+      case lemConnexity sA sB of
         Left  aLEQb | Refl <- lemMaxOfLEQ aLEQb ->
           let child1 = ASSH bLeft
               c1LEQp = lLEQb
-              child2 = merge' (ASSH bRight) (ASSH ha)
+              child2 = merge' (ASSH bRight) (ASSH hA)
               c2LEQp = lemDoubleLEQMax rLEQb aLEQb
-          in mkNode vb child1 child2 c1LEQp c2LEQp
-        Right bLEQa | Refl <- lemMaxSym sa sb
+          in mkNode vB child1 child2 c1LEQp c2LEQp
+        Right bLEQa | Refl <- lemMaxSym sA sB
                     , Refl <- lemMaxOfLEQ bLEQa ->
           let child1 = ASSH aLeft
               c1LEQp = lLEQa
-              child2 = merge' (ASSH aRight) (ASSH hb)
+              child2 = merge' (ASSH aRight) (ASSH hB)
               c2LEQp = lemDoubleLEQMax rLEQa bLEQa
-          in mkNode va child1 child2 c1LEQp c2LEQp
+          in mkNode vA child1 child2 c1LEQp c2LEQp
 
     mkNode :: Label c
            -> AlmostSomeSaferHeap a -> AlmostSomeSaferHeap b
            -> a <= c -> b <= c
            -> AlmostSomeSaferHeap c
-    mkNode vc (ASSH ha) (ASSH hb) aLEQc bLEQc =
-      case lemConnexity (_unRank . rank $ ha) (_unRank . rank $ hb) of
-        Left  arLEQbr -> ASSH $ Node'' vc incARank hb ha arLEQbr bLEQc aLEQc
-        Right brLEQar -> ASSH $ Node'' vc incBRank ha hb brLEQar aLEQc bLEQc
-      where
-      incARank = incRank $ rank ha
-      incBRank = incRank $ rank hb
+    mkNode vc (ASSH hA) (ASSH hB) aLEQc bLEQc
+      | rA <- rank hA, rB <- rank hB =
+      case lemConnexity (_unRank rA) (_unRank rB) of
+        Left  arLEQbr -> ASSH $ Node'' vc (incR rA) hB hA arLEQbr bLEQc aLEQc
+        Right brLEQar -> ASSH $ Node'' vc (incR rB) hA hB brLEQar aLEQc bLEQc
 
   decompose (SSH' saferHeap) =
     case saferHeap of
@@ -309,6 +307,12 @@ data SomeNat = forall n. SomeNat (SNat n)
 demote :: SNat n -> Nat
 demote SZ     = Z
 demote (SS n) = S (demote n)
+
+-- Doesn't type check!
+--
+-- promoteAttempt :: Nat -> SNat n
+-- promoteAttempt Z                                = SZ
+-- promoteAttempt (S n) | snat <- promoteAttempt n = SS snat
 
 promote :: Nat -> SomeNat
 promote Z                                 = SomeNat SZ
