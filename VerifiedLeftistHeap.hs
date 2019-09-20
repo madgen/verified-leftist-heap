@@ -130,7 +130,7 @@ instance Ord a => Heap (LeftistHeap a) where
 
   empty = Leaf
 
-  singleton x = Node x 0 Leaf Leaf
+  singleton x = Node x 1 Leaf Leaf
 
   merge Leaf heap = heap
   merge heap Leaf = heap
