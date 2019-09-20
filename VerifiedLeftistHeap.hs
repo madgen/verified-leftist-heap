@@ -324,15 +324,15 @@ data (<=) :: Nat -> Nat -> Type where
 
 lemZLEQAll :: SNat n -> 'Z <= n
 lemZLEQAll SZ     = Base
-lemZLEQAll (SS n) = Single (lemZLEQAll n)
+lemZLEQAll (SS x) = Single (lemZLEQAll x)
 
 lemConnexity :: SNat n -> SNat m -> Either (n <= m) (m <= n)
-lemConnexity SZ m = Left  (lemZLEQAll m)
-lemConnexity n SZ = Right (lemZLEQAll n)
-lemConnexity (SS n) (SS m) =
-  case lemConnexity n m of
-    Left  nLEQm -> Left  (Double nLEQm)
-    Right mLEQn -> Right (Double mLEQn)
+lemConnexity SZ y = Left  (lemZLEQAll y)
+lemConnexity x SZ = Right (lemZLEQAll x)
+lemConnexity (SS x) (SS y) =
+ case lemConnexity x y of
+   Left  xLEQy -> Left  (Double xLEQy)
+   Right yLEQx -> Right (Double yLEQx)
 
 lemDecLEQ :: 'S n <= m -> n <= m
 lemDecLEQ snLEQm =
