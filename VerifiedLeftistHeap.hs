@@ -404,12 +404,12 @@ execAction DeleteMax  = deleteMax
 carryOutActions :: Heap heap => [ Action (Elem heap) ] -> Maybe heap
 carryOutActions = foldlM (flip execAction) empty
 
-sameMaxAfterActions :: forall heap heap'
+sameAfterActions :: forall heap heap'
                      . Heap heap => Heap heap'
                     => Elem heap ~ Elem heap'
                     => Eq (Elem heap)
                     => [ Action (Elem heap) ] -> Bool
-sameMaxAfterActions acts = maxOfActions @heap acts == maxOfActions @heap' acts
+sameAfterActions acts = maxOfActions @heap acts == maxOfActions @heap' acts
   where
   maxOfActions :: forall h . Heap h
                => [ Action (Elem h) ] -> Maybe (Maybe (Elem h))
@@ -417,9 +417,9 @@ sameMaxAfterActions acts = maxOfActions @heap acts == maxOfActions @heap' acts
 
 main :: IO ()
 main = do
-  quickCheck (sameMaxAfterActions @(LeftistHeap Int)  @[ Int ])
-  quickCheck (sameMaxAfterActions @(SomeSafeHeap Int) @[ Int ])
-  quickCheck (sameMaxAfterActions @SomeSaferHeap      @[ Nat ])
+  quickCheck (sameAfterActions @(LeftistHeap Int)  @[ Int ])
+  quickCheck (sameAfterActions @(SomeSafeHeap Int) @[ Int ])
+  quickCheck (sameAfterActions @SomeSaferHeap      @[ Nat ])
 
   putStrLn ""
   sampleActions <- sample' (arbitrary @(Action Int))
