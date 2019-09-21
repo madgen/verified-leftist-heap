@@ -354,10 +354,10 @@ lemMaxSym x SZ          | Refl <- lemMaxOfLEQ $ lemZLEQAll x = Refl
 lemMaxSym (SS x) (SS y) | Refl <- lemMaxSym x y              = Refl
 
 lemMaxOfLEQ :: n <= m -> Max n m :~: m
-lemMaxOfLEQ Base                                        = Refl
-lemMaxOfLEQ (Double xLEQy) | Refl  <- lemMaxOfLEQ xLEQy = Refl
-lemMaxOfLEQ (Single xLEQy) | (x,_) <- recover     xLEQy =
-  case x of
+lemMaxOfLEQ Base                                       = Refl
+lemMaxOfLEQ (Double xLEQy) | Refl <- lemMaxOfLEQ xLEQy = Refl
+lemMaxOfLEQ (Single xLEQy) =
+  case fst $ recover xLEQy of
     SZ                                           -> Refl
     SS _ | Refl <- lemMaxOfLEQ (lemDecLEQ xLEQy) -> Refl
 
