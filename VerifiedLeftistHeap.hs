@@ -409,9 +409,11 @@ sameMaxAfterActions :: forall heap heap'
                     => Elem heap ~ Elem heap'
                     => Eq (Elem heap)
                     => [ Action (Elem heap) ] -> Bool
-sameMaxAfterActions acts =
-  (findMax <$> carryOutActions @heap  acts) ==
-  (findMax <$> carryOutActions @heap' acts)
+sameMaxAfterActions acts = maxOfActions @heap acts == maxOfActions @heap' acts
+  where
+  maxOfActions :: forall h . Heap h
+               => [ Action (Elem h) ] -> Maybe (Maybe (Elem h))
+  maxOfActions = fmap findMax . carryOutActions @h
 
 main :: IO ()
 main = do
