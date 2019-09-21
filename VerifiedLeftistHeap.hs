@@ -333,15 +333,13 @@ lemConnexity (SS x) (SS y) =
    Right yLEQx -> Right (Double yLEQx)
 
 lemDecLEQ :: 'S n <= m -> n <= m
-lemDecLEQ snLEQm =
-  case recover snLEQm of
-    (SS x, y) -> go x y snLEQm
+lemDecLEQ snLEQm = uncurry go (recover snLEQm) snLEQm
   where
-  go :: SNat n -> SNat m -> 'S n <= m -> n <= m
-  go SZ     y      _            = lemZLEQAll y
-  go _      SZ     _            = error "Impossible case."
-  go _      (SS _) (Single leq) = Single (lemDecLEQ leq)
-  go (SS _) (SS _) (Double leq) = Double (lemDecLEQ leq)
+  go :: SNat ('S n) -> SNat m -> 'S n <= m -> n <= m
+  go _            SZ     _            = error "Inaccessible case."
+  go _            (SS _) (Single leq) = Single (lemDecLEQ leq)
+  go (SS SZ)      y      (Double _)   = lemZLEQAll y
+  go (SS (SS _))  (SS _) (Double leq) = Double (lemDecLEQ leq)
 
 type family Max (n :: Nat) (m :: Nat) :: Nat where
   Max 'Z m          = m
