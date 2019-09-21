@@ -308,12 +308,6 @@ demote :: SNat n -> Nat
 demote SZ     = Z
 demote (SS n) = S (demote n)
 
--- Doesn't type check!
---
--- promoteAttempt :: Nat -> SNat n
--- promoteAttempt Z                                = SZ
--- promoteAttempt (S n) | snat <- promoteAttempt n = SS snat
-
 promote :: Nat -> SomeNat
 promote Z                                 = SomeNat SZ
 promote (S n) | SomeNat snat <- promote n = SomeNat $ SS snat
