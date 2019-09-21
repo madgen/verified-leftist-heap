@@ -318,7 +318,7 @@ promote :: Nat -> SomeNat
 promote Z                                 = SomeNat SZ
 promote (S n) | SomeNat snat <- promote n = SomeNat $ SS snat
 
-data a :~: b where -- Same as Data.Type.Equality
+data (:~:) :: k -> k -> Type where -- Same as that in Data.Type.Equality
   Refl :: a :~: a
 
 data (<=) :: Nat -> Nat -> Type where
