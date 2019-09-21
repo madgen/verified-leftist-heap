@@ -155,8 +155,8 @@ instance Ord a => Heap (LeftistHeap a) where
 
 newtype Rank n = Rank { _unRank :: SNat n }
 
-incR :: Rank rank -> Rank ('S rank)
-incR (Rank snat) = Rank (SS snat)
+inc :: Rank rank -> Rank ('S rank)
+inc (Rank snat) = Rank (SS snat)
 
 data SafeHeap :: Nat -> Type -> Type where
   Leaf' :: SafeHeap 'Z a
@@ -197,8 +197,8 @@ instance Ord label => Heap (SomeSafeHeap label) where
     mkNode :: a -> SomeSafeHeap a -> SomeSafeHeap a -> SomeSafeHeap a
     mkNode a (SSH h1) (SSH h2) =
       case lemConnexity (_unRank . rank $ h1) (_unRank . rank $ h2) of
-        Left  r1LEQr2 -> SSH $ Node' a (incR $ rank h1) h2 h1 r1LEQr2
-        Right r2LEQr1 -> SSH $ Node' a (incR $ rank h2) h1 h2 r2LEQr1
+        Left  r1LEQr2 -> SSH $ Node' a (inc $ rank h1) h2 h1 r1LEQr2
+        Right r2LEQr1 -> SSH $ Node' a (inc $ rank h2) h1 h2 r2LEQr1
 
   decompose (SSH safeHeap) =
     case safeHeap of
@@ -277,8 +277,8 @@ instance Heap SomeSaferHeap where
     mkNode vc (ASSH hA) (ASSH hB) aLEQc bLEQc
       | rA <- rank hA, rB <- rank hB =
       case lemConnexity (_unRank rA) (_unRank rB) of
-        Left  arLEQbr -> ASSH $ Node'' vc (incR rA) hB hA arLEQbr bLEQc aLEQc
-        Right brLEQar -> ASSH $ Node'' vc (incR rB) hA hB brLEQar aLEQc bLEQc
+        Left  arLEQbr -> ASSH $ Node'' vc (inc rA) hB hA arLEQbr bLEQc aLEQc
+        Right brLEQar -> ASSH $ Node'' vc (inc rB) hA hB brLEQar aLEQc bLEQc
 
   decompose (SSH' saferHeap) =
     case saferHeap of
