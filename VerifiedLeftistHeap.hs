@@ -59,7 +59,7 @@ class Heap heap where
     go [ x ] = [ x ]
     go (x : y : rest) = go (merge x y : go rest)
 
-  -- Motification
+  -- Modification
   insert :: Elem heap -> heap -> heap
   insert x = merge (singleton x)
 
