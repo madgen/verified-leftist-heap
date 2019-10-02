@@ -392,8 +392,8 @@ instance Arbitrary Nat where
 
 instance Arbitrary a => Arbitrary (Action a) where
   arbitrary = do
-    n <- arbitrary @Int
-    if n `mod` 2 == 0
+    shouldAddInsert <- arbitrary @Bool
+    if shouldAddInsert
       then Insert <$> arbitrary
       else pure DeleteMax
 
