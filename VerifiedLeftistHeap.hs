@@ -23,7 +23,6 @@ import Data.Kind (Type)
 import Data.Foldable (foldlM)
 
 import Test.QuickCheck
-import Test.QuickCheck.Modifiers (Positive(..))
 import Test.QuickCheck.Gen (sample')
 
 class Heap heap where
@@ -385,7 +384,7 @@ recover (Double nLEQm)  | (x,y) <- recover nLEQm  = (SS x, SS y)
 data Action a = Insert a | DeleteMax deriving Show
 
 instance Arbitrary Nat where
-  arbitrary = fromInt . getPositive <$> arbitrary @(Positive Int)
+  arbitrary = fromInt . getNonNegative <$> arbitrary @(NonNegative Int)
     where
     fromInt 0 = Z
     fromInt n = S (fromInt (n - 1))
